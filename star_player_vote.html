@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Player — Blacfox</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#FF6B35;--orange-dim:#C44E1F;--orange-glow:rgba(255,107,53,0.16);
+  --bg:#0C0B09;--surface:#141310;--surface2:#1C1A16;
+  --border:rgba(255,107,53,0.14);--border-h:rgba(255,107,53,0.55);
+  --text:#F2EDE6;--muted:rgba(242,237,230,0.42);
+  --green:#3A7A3A;--green-bg:#1A2E1A;--green-t:#8FD18F;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+.starfield{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:white;animation:twinkle var(--d,3s) ease-in-out infinite;animation-delay:var(--delay,0s)}
+@keyframes twinkle{0%,100%{opacity:var(--mn,.1);transform:scale(1)}50%{opacity:var(--mx,.6);transform:scale(1.4)}}
+.screen{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:2.5rem 1.5rem 4rem;display:none}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.fade{opacity:0;animation:fadeUp 0.55s ease forwards}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:0.35em;color:var(--orange);text-align:center;margin-bottom:0.5rem;animation-delay:0.1s}
+.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(58px,13vw,92px);line-height:0.88;letter-spacing:0.02em;text-align:center;color:var(--text);animation-delay:0.22s}
+.title em{color:var(--orange);font-style:normal}
+.subtitle{text-align:center;font-size:14px;color:var(--muted);margin-top:0.9rem;animation-delay:0.36s}
+.signin-prompt{text-align:center;font-size:15px;color:var(--muted);margin:2.5rem 0 1.25rem;animation-delay:0.48s}
+.signin-prompt strong{color:var(--text);font-weight:500}
+.name-grid,.vote-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:10px}
+.name-grid{animation-delay:0.56s}
+.vote-grid{margin-bottom:2rem}
+.name-btn{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0.9rem 0.85rem;cursor:pointer;transition:border-color 0.18s,transform 0.14s,background 0.18s;text-align:left}
+.name-btn:hover{border-color:var(--border-h);background:var(--surface2);transform:translateY(-2px)}
+.name-btn.taken{opacity:0.32;cursor:not-allowed;pointer-events:none}
+.nb-avatar,.pc-avatar,.vb-avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif}
+.nb-avatar{width:38px;height:38px;font-size:14px;margin-bottom:8px}
+.pc-avatar{width:40px;height:40px;font-size:15px;margin-bottom:9px}
+.vb-avatar{width:34px;height:34px;font-size:13px}
+.nb-name{font-size:13px;font-weight:500;color:var(--text);line-height:1.2}
+.nb-taken{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:0.06em;text-transform:uppercase}
+.voter-badge{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:2rem;animation-delay:0.42s}
+.vb-name{font-size:14px;color:var(--muted)}
+.vb-name strong{color:var(--text);font-weight:500}
+.ring-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:2rem;animation-delay:0.5s}
+.ring-track{fill:none;stroke:rgba(255,107,53,0.1)}
+.ring-fill{fill:none;stroke:var(--orange);stroke-linecap:round;transition:stroke-dashoffset 0.75s cubic-bezier(0.16,1,0.3,1);transform-origin:center;transform:rotate(-90deg)}
+.ring-num{font-family:'Bebas Neue',sans-serif;font-size:26px;fill:var(--orange);dominant-baseline:middle;text-anchor:middle}
+.ring-lbl{font-size:10px;fill:rgba(242,237,230,0.42);dominant-baseline:middle;text-anchor:middle;letter-spacing:0.14em;text-transform:uppercase;font-family:'DM Sans',sans-serif}
+.voted-msg{background:var(--green-bg);border:1px solid var(--green);border-radius:12px;padding:1rem 1.25rem;margin-bottom:2rem;text-align:center;font-size:14px;color:var(--green-t);display:none}
+.voted-msg.show{display:block;animation:fadeUp 0.4s ease forwards}
+.voted-msg strong{color:#b8f0b8}
+.person-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 0.9rem;cursor:pointer;position:relative;overflow:hidden;transition:border-color 0.18s,transform 0.14s,background 0.18s;opacity:0;animation:fadeUp 0.5s ease forwards}
+.person-card:hover:not(.disabled):not(.self){border-color:var(--border-h);transform:translateY(-3px);background:var(--surface2)}
+.person-card.selected{border-color:var(--orange);background:var(--orange-glow)}
+.person-card.disabled{cursor:default}
+.person-card.self{opacity:0.28;cursor:not-allowed}
+.pc-name{font-size:13px;font-weight:500;color:var(--text);line-height:1.2}
+.pc-self{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:0.06em;text-transform:uppercase}
+.check-badge{position:absolute;top:7px;right:7px;width:20px;height:20px;border-radius:50%;background:var(--orange);color:#0C0B09;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;opacity:0;transform:scale(0);transition:opacity 0.2s,transform 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+.person-card.selected .check-badge{opacity:1;transform:scale(1)}
+.cta-wrap{text-align:center}
+.vote-btn{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.08em;background:var(--orange);color:#0C0B09;border:none;border-radius:12px;padding:14px 54px;cursor:pointer;transition:transform 0.15s,background 0.15s}
+.vote-btn:hover{background:#ff8255;transform:translateY(-2px)}
+.vote-btn:active{transform:scale(0.97)}
+.vote-btn:disabled{opacity:0.3;cursor:not-allowed;transform:none}
+.admin-section{margin-top:3rem;border-top:1px solid rgba(255,255,255,0.06);padding-top:1.5rem;text-align:center}
+.admin-label{font-size:11px;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.75rem}
+.admin-btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.ghost-btn{font-size:12px;color:var(--muted);background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 20px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:color 0.2s,border-color 0.2s}
+.ghost-btn:hover{color:var(--orange);border-color:var(--orange)}
+
+/* PIN modal overlay */
+.pin-overlay{display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.75);align-items:center;justify-content:center}
+.pin-overlay.open{display:flex}
+.pin-box{background:var(--surface);border:1px solid var(--border-h);border-radius:18px;padding:2rem 1.75rem;width:320px;text-align:center}
+.pin-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:0.06em;color:var(--text);margin-bottom:0.4rem}
+.pin-sub{font-size:13px;color:var(--muted);margin-bottom:1.25rem}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:1.25rem}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);transition:background 0.15s}
+.pin-dot.filled{background:var(--orange);border-color:var(--orange)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+.pin-key{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.05em;background:var(--surface2);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 0;cursor:pointer;color:var(--text);transition:background 0.12s,transform 0.1s}
+.pin-key:hover{background:#252318;transform:scale(1.04)}
+.pin-key:active{transform:scale(0.96)}
+.pin-error{font-size:12px;color:#ff6b6b;min-height:18px;margin-bottom:0.5rem}
+.pin-cancel{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline}
+.pin-cancel:hover{color:var(--text)}
+
+/* ── REVEAL SCREEN ── */
+#screen-reveal{background:var(--bg)}
+.reveal-inner{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
+canvas#fw-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.reveal-content{position:relative;z-index:2}
+.cdn-num{font-family:'Bebas Neue',sans-serif;font-size:clamp(120px,28vw,200px);line-height:1;color:var(--orange);opacity:0;display:none}
+.cdn-num.pop{display:block;animation:cdnPop 0.65s cubic-bezier(0.34,1.56,0.64,1) forwards}
+.cdn-num.fade-out{animation:cdnFade 0.28s ease forwards}
+@keyframes cdnPop{from{opacity:0;transform:scale(2.2)}to{opacity:1;transform:scale(1)}}
+@keyframes cdnFade{to{opacity:0;transform:scale(0.4)}}
+.winner-stage{display:none;text-align:center}
+.winner-stage.show{display:block}
+.ws-eyebrow{font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:rgba(255,107,53,0.65);margin-bottom:0.75rem;animation:fadeUp 0.5s ease forwards}
+.ws-trophy{font-size:64px;margin-bottom:0.5rem;animation:wTrophy 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards}
+@keyframes wTrophy{from{opacity:0;transform:scale(0) rotate(-20deg)}to{opacity:1;transform:scale(1) rotate(0deg)}}
+.ws-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(64px,16vw,110px);line-height:0.95;color:var(--orange);letter-spacing:0.03em;animation:wName 0.75s 0.2s cubic-bezier(0.34,1.56,0.64,1) both}
+@keyframes wName{from{opacity:0;transform:scale(0.5) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.ws-sub{font-size:13px;color:var(--muted);letter-spacing:0.18em;text-transform:uppercase;margin-top:0.75rem;animation:fadeUp 0.5s 0.5s ease both}
+.ws-back{margin-top:2.5rem;animation:fadeUp 0.5s 0.8s ease both}
+.ws-back button{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);background:none;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 22px;cursor:pointer;transition:color 0.2s,border-color 0.2s}
+.ws-back button:hover{color:var(--text);border-color:rgba(255,255,255,0.3)}
+
+.burst{position:fixed;pointer-events:none;z-index:999}
+.particle{position:absolute;width:6px;height:6px;border-radius:50%;animation:burst-out 0.75s ease-out forwards}
+@keyframes burst-out{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--tx),var(--ty)) scale(0);opacity:0}}
+@keyframes popIn{from{opacity:0;transform:scale(0.82)}to{opacity:1;transform:scale(1)}}
+</style>
+</head>
+<body>
+
+<div class="starfield" id="starfield"></div>
+<canvas id="fw-canvas"></canvas>
+
+<!-- ═══ SIGN-IN ═══ -->
+<div class="screen active" id="screen-signin">
+  <div class="logo fade">Blacfox</div>
+  <div class="title fade">Star<br><em>Player</em></div>
+  <div class="subtitle fade">Who deserves the crown this week?</div>
+  <p class="signin-prompt fade"><strong>Choose your name</strong> to check in and vote</p>
+  <div class="name-grid fade" id="name-grid"></div>
+</div>
+
+<!-- ═══ VOTING ═══ -->
+<div class="screen" id="screen-vote">
+  <div class="logo fade">Blacfox</div>
+  <div class="title fade">Star<br><em>Player</em></div>
+  <div class="voter-badge fade" id="voter-badge"></div>
+
+  <div class="ring-wrap fade">
+    <svg width="112" height="112" viewBox="0 0 112 112" overflow="visible">
+      <circle class="ring-track" cx="56" cy="56" r="45" stroke-width="6"/>
+      <circle class="ring-fill" id="ring-fill" cx="56" cy="56" r="45" stroke-width="6"
+        stroke-dasharray="282.74" stroke-dashoffset="282.74"/>
+      <text class="ring-num" id="ring-num" x="56" y="51">0</text>
+      <text class="ring-lbl" x="56" y="67">in office</text>
+    </svg>
+  </div>
+
+  <div class="voted-msg" id="voted-msg">
+    ✓ You voted for <strong id="voted-for-name"></strong> — nice one!
+  </div>
+
+  <div class="vote-grid" id="vote-grid"></div>
+
+  <div class="cta-wrap">
+    <button class="vote-btn" id="vote-btn" disabled>Cast vote</button>
+  </div>
+
+  <div class="admin-section">
+    <div class="admin-label">Admin</div>
+    <div class="admin-btn-row">
+      <button class="ghost-btn" id="reveal-btn">Reveal winner</button>
+      <button class="ghost-btn" id="reset-btn">Reset for new week</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REVEAL ═══ -->
+<div class="screen" id="screen-reveal">
+  <div class="reveal-inner">
+    <div class="reveal-content">
+      <div class="cdn-num" id="cdn-num">3</div>
+      <div class="winner-stage" id="winner-stage">
+        <div class="ws-eyebrow">This week's star player</div>
+        <div class="ws-trophy">🏆</div>
+        <div class="ws-name" id="ws-name"></div>
+        <div class="ws-sub">Blacfox</div>
+        <div class="ws-back"><button id="back-btn">Back to board</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PIN MODAL ═══ -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-title" id="pin-title">Admin access</div>
+    <div class="pin-sub" id="pin-sub">Enter the admin PIN to continue</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-pad" id="pin-pad">
+      <button class="pin-key" data-k="1">1</button>
+      <button class="pin-key" data-k="2">2</button>
+      <button class="pin-key" data-k="3">3</button>
+      <button class="pin-key" data-k="4">4</button>
+      <button class="pin-key" data-k="5">5</button>
+      <button class="pin-key" data-k="6">6</button>
+      <button class="pin-key" data-k="7">7</button>
+      <button class="pin-key" data-k="8">8</button>
+      <button class="pin-key" data-k="9">9</button>
+      <button class="pin-key" data-k="back" style="font-size:16px">⌫</button>
+      <button class="pin-key" data-k="0">0</button>
+      <button class="pin-key" data-k="ok">OK</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <button class="pin-cancel" id="pin-cancel">Cancel</button>
+  </div>
+</div>
+
+<script>
+const TEAM = [
+  { name:"Malaika Ramos",    color:"#E86B8A" },
+  { name:"Nomonde Simelane", color:"#7B6CF5" },
+  { name:"Tyrone Mondo",     color:"#4ECDC4" },
+  { name:"Emilio Damons",    color:"#FF9A56" },
+  { name:"Mtiwabo Mxenge",   color:"#5CB8F7" },
+  { name:"Amilio Benjamin",  color:"#FF6B35" },
+  { name:"Laroche Doherty",  color:"#A8E6CF" },
+  { name:"Olwethu Bunyonyo", color:"#FF8B94" },
+  { name:"Jerome Marufu",    color:"#C3A6FF" },
+  { name:"Tonderai Chinya",  color:"#FFD93D" },
+  { name:"Amjad",            color:"#F97316", badge:"AZ" },
+  { name:"Benita",           color:"#FB923C", badge:"BJ" },
+  { name:"Jaydon",           color:"#FBBF24", badge:"JV" },
+  { name:"Brandon",          color:"#34D399", badge:"BM" },
+  { name:"Ryan",             color:"#60A5FA", badge:"RE" },
+];
+
+const ADMIN_PIN = "3028";
+const BENITA    = "Benita";
+
+const ini = (n,p) => p&&p.badge ? p.badge : n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const fn  = n => n.split(' ')[0];
+
+function weekKey(){
+  const now=new Date(), day=now.getDay();
+  const m=new Date(now); m.setDate(now.getDate()-day+(day===0?-6:1));
+  return `sfx_${m.getFullYear()}_${String(m.getMonth()+1).padStart(2,'0')}_${String(m.getDate()).padStart(2,'0')}`;
+}
+const WEEK_KEY    = weekKey();
+const SESSION_KEY = WEEK_KEY+'_me';
+const CIRC        = 282.74;
+
+let state  = {votes:{},checkedIn:[]};
+let myName = null, myVote = null, selIdx = null;
+
+async function loadState(){
+  try{ const r=await window.storage.get(WEEK_KEY,true); state=r?JSON.parse(r.value):{votes:{},checkedIn:[]}; if(!Array.isArray(state.checkedIn))state.checkedIn=[]; }catch{state={votes:{},checkedIn:[]};}
+  try{ const r2=await window.storage.get(SESSION_KEY,false); if(r2){const s=JSON.parse(r2.value);myName=s.n||null;myVote=s.v||null;} }catch{}
+}
+async function persist(){ await window.storage.set(WEEK_KEY,JSON.stringify(state),true); }
+async function persistSession(){ await window.storage.set(SESSION_KEY,JSON.stringify({n:myName,v:myVote}),false); }
+
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+
+function updateRing(){
+  const c=state.checkedIn.length;
+  document.getElementById('ring-num').textContent=c;
+  document.getElementById('ring-fill').style.strokeDashoffset=(CIRC*(1-Math.min(c/TEAM.length,1))).toFixed(2);
+}
+
+function getLeader(){
+  let mx=0,lead=null;
+  for(const [n,v] of Object.entries(state.votes)) if(v>mx){mx=v;lead=n;}
+  return lead;
+}
+
+/* ── Sign-in ── */
+function buildSignIn(){
+  const grid=document.getElementById('name-grid'); grid.innerHTML='';
+  TEAM.forEach(person=>{
+    const taken=state.checkedIn.includes(person.name);
+    const btn=document.createElement('button');
+    btn.className='name-btn'+(taken?' taken':'');
+    btn.innerHTML=`<div class="nb-avatar" style="background:${person.color}22;color:${person.color}">${ini(person.name,person)}</div><div class="nb-name">${fn(person.name)}</div>${taken?'<div class="nb-taken">checked in</div>':''}`;
+    if(!taken) btn.addEventListener('click',()=>signIn(person.name));
+    grid.appendChild(btn);
+  });
+}
+
+async function signIn(name){
+  myName=name;
+  if(!state.checkedIn.includes(name)){state.checkedIn.push(name);await persist();}
+  await persistSession();
+  showVoteScreen();
+}
+
+/* ── Vote screen ── */
+function showVoteScreen(){
+  show('screen-vote');
+  const p=TEAM.find(x=>x.name===myName);
+  if(p) document.getElementById('voter-badge').innerHTML=`<div class="vb-avatar" style="background:${p.color}22;color:${p.color}">${ini(p.name,p)}</div><div class="vb-name">Voting as <strong>${fn(p.name)}</strong></div>`;
+
+  const grid=document.getElementById('vote-grid'); grid.innerHTML='';
+  TEAM.forEach((person,i)=>{
+    const isSelf=person.name===myName, isVoted=myVote===person.name, locked=!!myVote;
+    const card=document.createElement('div');
+    card.className='person-card'+(isSelf?' self':'')+(isVoted?' selected':'')+(locked&&!isSelf?' disabled':'');
+    card.id='card-'+i; card.style.animationDelay=(0.05*i+0.45)+'s';
+    card.innerHTML=`<div class="check-badge">✓</div><div class="pc-avatar" style="background:${person.color}22;color:${person.color}">${ini(person.name,person)}</div><div class="pc-name">${fn(person.name)}</div>${isSelf?'<div class="pc-self">You</div>':''}`;
+    if(!isSelf&&!locked) card.addEventListener('click',()=>selectCard(i));
+    grid.appendChild(card);
+  });
+  updateRing();
+  if(myVote){
+    document.getElementById('voted-for-name').textContent=fn(myVote);
+    document.getElementById('voted-msg').classList.add('show');
+    document.getElementById('vote-btn').disabled=true;
+  }
+}
+
+function selectCard(idx){
+  if(myVote)return;
+  TEAM.forEach((_,i)=>{const c=document.getElementById('card-'+i);if(c)c.classList.toggle('selected',i===idx);});
+  selIdx=idx; document.getElementById('vote-btn').disabled=false;
+}
+
+document.getElementById('vote-btn').addEventListener('click',async(e)=>{
+  if(selIdx===null||myVote)return;
+  const p=TEAM[selIdx];
+  state.votes[p.name]=(state.votes[p.name]||0)+1;
+  myVote=p.name;
+  await persist(); await persistSession();
+  smallBurst(e.clientX,e.clientY);
+  document.getElementById('vote-btn').disabled=true;
+  document.getElementById('voted-for-name').textContent=fn(p.name);
+  document.getElementById('voted-msg').classList.add('show');
+  TEAM.forEach((_,i)=>{const c=document.getElementById('card-'+i);if(c&&!c.classList.contains('self')&&!c.classList.contains('selected'))c.classList.add('disabled');});
+});
+
+/* ── Admin PIN ── */
+let pinBuffer='', pinAction=null;
+
+function openPin(action){
+  pinAction=action; pinBuffer='';
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+  document.getElementById('pin-overlay').classList.add('open');
+}
+function closePin(){ document.getElementById('pin-overlay').classList.remove('open'); pinBuffer=''; pinAction=null; }
+
+function updatePinDots(){
+  for(let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('filled',i<pinBuffer.length);
+}
+
+document.getElementById('pin-pad').addEventListener('click',e=>{
+  const k=e.target.closest('.pin-key')?.dataset.k; if(!k)return;
+  if(k==='back'){ pinBuffer=pinBuffer.slice(0,-1); updatePinDots(); document.getElementById('pin-error').textContent=''; return; }
+  if(k==='ok'){ checkPin(); return; }
+  if(pinBuffer.length<4){ pinBuffer+=k; updatePinDots(); if(pinBuffer.length===4) checkPin(); }
+});
+
+function checkPin(){
+  if(pinBuffer===ADMIN_PIN){ closePin(); if(pinAction==='reveal') startReveal(); else if(pinAction==='reset') doReset(); }
+  else{ document.getElementById('pin-error').textContent='Incorrect PIN, try again'; pinBuffer=''; updatePinDots(); }
+}
+document.getElementById('pin-cancel').addEventListener('click',closePin);
+
+/* ── Admin buttons ── */
+document.getElementById('reveal-btn').addEventListener('click',()=>{
+  if(myName===BENITA){ startReveal(); } else { openPin('reveal'); }
+});
+document.getElementById('reset-btn').addEventListener('click',()=>{
+  if(myName===BENITA){ doReset(); } else { openPin('reset'); }
+});
+
+async function doReset(){
+  if(!confirm('Reset all votes and check-ins for a new week?'))return;
+  state={votes:{},checkedIn:[]}; myName=null; myVote=null; selIdx=null;
+  try{await window.storage.set(WEEK_KEY,JSON.stringify(state),true);}catch{}
+  try{await window.storage.delete(SESSION_KEY,false);}catch{}
+  stopFireworks();
+  document.getElementById('voted-msg').classList.remove('show');
+  document.getElementById('vote-btn').disabled=true;
+  document.getElementById('ring-fill').style.strokeDashoffset=CIRC;
+  document.getElementById('ring-num').textContent='0';
+  show('screen-signin'); buildSignIn();
+}
+
+/* ── Reveal / countdown ── */
+function startReveal(){
+  show('screen-reveal');
+  const cdnEl=document.getElementById('cdn-num');
+  const wsEl=document.getElementById('winner-stage');
+  cdnEl.style.display='none'; cdnEl.className='cdn-num';
+  wsEl.className='winner-stage';
+  let count=3;
+
+  function showNum(n, cb){
+    cdnEl.textContent=n; cdnEl.style.display='block';
+    cdnEl.className='cdn-num'; void cdnEl.offsetWidth; cdnEl.classList.add('pop');
+    setTimeout(()=>{
+      cdnEl.className='cdn-num fade-out';
+      setTimeout(cb, 300);
+    }, 800);
+  }
+
+  showNum(3,()=>showNum(2,()=>showNum(1,()=>{
+    cdnEl.style.display='none';
+    const lead=getLeader();
+    document.getElementById('ws-name').textContent=lead?fn(lead):'—';
+    wsEl.className='winner-stage show';
+    launchFullFireworks();
+  })));
+}
+
+document.getElementById('back-btn').addEventListener('click',()=>{
+  stopFireworks();
+  showVoteScreen();
+});
+
+/* ── Fireworks ── */
+const fwCanvas=document.getElementById('fw-canvas');
+const fwCtx=fwCanvas.getContext('2d');
+let fwParticles=[], fwAnimId=null, fwLaunchId=null;
+
+function sizeCanvas(){ fwCanvas.width=window.innerWidth; fwCanvas.height=window.innerHeight; }
+window.addEventListener('resize',sizeCanvas); sizeCanvas();
+
+function launchFw(x,y){
+  const cols=['#FF6B35','#FFD93D','#FF8B94','#A8E6CF','#C3A6FF','#ffffff','#FB923C','#60A5FA'];
+  const n=32+Math.floor(Math.random()*16);
+  for(let i=0;i<n;i++){
+    const a=(i/n)*Math.PI*2, sp=2.8+Math.random()*4;
+    fwParticles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.2,alpha:1,color:cols[Math.floor(Math.random()*cols.length)],size:2.5+Math.random()*2,decay:0.014+Math.random()*0.01,trail:[]});
+  }
+}
+
+function animFw(){
+  fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height);
+  fwParticles=fwParticles.filter(p=>p.alpha>0.01);
+  for(const p of fwParticles){
+    p.trail.push({x:p.x,y:p.y,a:p.alpha}); if(p.trail.length>6)p.trail.shift();
+    for(let i=0;i<p.trail.length;i++){
+      const t=p.trail[i]; fwCtx.globalAlpha=t.a*(i/p.trail.length)*0.35;
+      fwCtx.fillStyle=p.color; fwCtx.beginPath(); fwCtx.arc(t.x,t.y,p.size*0.5,0,Math.PI*2); fwCtx.fill();
+    }
+    fwCtx.globalAlpha=p.alpha; fwCtx.fillStyle=p.color; fwCtx.beginPath(); fwCtx.arc(p.x,p.y,p.size,0,Math.PI*2); fwCtx.fill();
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.055; p.vx*=0.98; p.alpha-=p.decay;
+  }
+  fwCtx.globalAlpha=1;
+  fwAnimId=requestAnimationFrame(animFw);
+}
+
+function launchFullFireworks(){
+  if(!fwAnimId) animFw();
+  const W=fwCanvas.width, H=fwCanvas.height;
+  const positions=[[W*.25,H*.28],[W*.75,H*.22],[W*.5,H*.18],[W*.15,H*.5],[W*.85,H*.42],[W*.6,H*.55],[W*.35,H*.65],[W*.8,H*.65],[W*.2,H*.72]];
+  let i=0;
+  const fire=()=>{ if(i>=positions.length)return; launchFw(positions[i][0],positions[i][1]); i++; fwLaunchId=setTimeout(fire,200); };
+  fire();
+  const repeat=()=>{ if(document.getElementById('screen-reveal').classList.contains('active')){ let j=0; const r=()=>{ if(j>=4)return; launchFw(Math.random()*W,Math.random()*H*0.6); j++; fwLaunchId=setTimeout(r,250); }; r(); fwLaunchId=setTimeout(repeat,2200); } };
+  fwLaunchId=setTimeout(repeat,2200);
+}
+
+function stopFireworks(){
+  if(fwAnimId){cancelAnimationFrame(fwAnimId);fwAnimId=null;}
+  if(fwLaunchId){clearTimeout(fwLaunchId);fwLaunchId=null;}
+  fwParticles=[]; fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height);
+}
+
+/* ── Small vote burst ── */
+function smallBurst(x,y){
+  const cols=['#FF6B35','#FFD93D','#FF8B94','#A8E6CF','#C3A6FF'];
+  const b=document.createElement('div'); b.className='burst'; b.style.left=x+'px'; b.style.top=y+'px';
+  for(let i=0;i<16;i++){
+    const p=document.createElement('div'); p.className='particle';
+    const a=(i/16)*Math.PI*2, d=45+Math.random()*45;
+    p.style.setProperty('--tx',Math.cos(a)*d+'px'); p.style.setProperty('--ty',Math.sin(a)*d+'px');
+    p.style.background=cols[i%cols.length]; p.style.animationDelay=(Math.random()*0.08)+'s';
+    b.appendChild(p);
+  }
+  document.body.appendChild(b); setTimeout(()=>b.remove(),900);
+}
+
+/* ── Stars ── */
+function buildStars(){
+  const sf=document.getElementById('starfield');
+  for(let i=0;i<90;i++){
+    const s=document.createElement('div'); s.className='star';
+    const sz=Math.random()*2.2+0.4;
+    s.style.width=sz+'px'; s.style.height=sz+'px';
+    s.style.left=Math.random()*100+'%'; s.style.top=Math.random()*100+'%';
+    s.style.setProperty('--d',(2+Math.random()*4)+'s');
+    s.style.setProperty('--delay',(Math.random()*5)+'s');
+    s.style.setProperty('--mn',(0.04+Math.random()*0.08).toFixed(2));
+    s.style.setProperty('--mx',(0.35+Math.random()*0.5).toFixed(2));
+    sf.appendChild(s);
+  }
+}
+
+async function init(){
+  buildStars(); await loadState();
+  if(myName){showVoteScreen();}else{buildSignIn();}
+}
+init();
+</script>
+</body>
+</html>
